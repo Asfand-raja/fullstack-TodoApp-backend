@@ -1,8 +1,9 @@
 const UserModel = require('../Models/UserModel');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const { sendVerificationEmail } = require('../utils/emailService');
+const passport = require('passport');
 
+// REGISTER
 module.exports.register = async (req, res) => {
     try {
         const { firstName, lastName, email, password } = req.body;
@@ -14,7 +15,6 @@ module.exports.register = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Generate 6-digit code
         const code = Math.floor(100000 + Math.random() * 900000).toString();
 
         const newUser = await UserModel.create({
@@ -25,37 +25,30 @@ module.exports.register = async (req, res) => {
             verificationCode: code
         });
 
-        // Send Email
         try {
             await sendVerificationEmail(email, code);
-            res.status(201).json({
-                message: "Verification code sent to your email.",
-                email: newUser.email
-            });
+            res.status(201).json({ message: "Verification code sent to your email.", email: newUser.email });
         } catch (emailErr) {
-            // Clean up if email fails
             await UserModel.findByIdAndDelete(newUser._id);
             return res.status(500).json({ message: "Failed to send verification email. Please try again." });
         }
-
     } catch (err) {
         console.error("Registration Error:", err);
         res.status(500).json({ message: err.message });
     }
 };
 
+// VERIFY EMAIL
 module.exports.verify = async (req, res) => {
     try {
         const { email, code } = req.body;
         const user = await UserModel.findOne({ email });
 
-        if (!user) {
-            return res.status(400).json({ message: "User not found" });
-        }
+        if (!user) return res.status(400).json({ message: "User not found" });
 
         if (user.verificationCode === code) {
             user.isVerified = true;
-            user.verificationCode = undefined; // Clear code
+            user.verificationCode = undefined;
             await user.save();
             res.status(200).json({ message: "Email verified successfully! You can now login." });
         } else {
@@ -67,18 +60,14 @@ module.exports.verify = async (req, res) => {
     }
 };
 
+// RESEND CODE
 module.exports.resendCode = async (req, res) => {
     try {
         const { email } = req.body;
         const user = await UserModel.findOne({ email });
 
-        if (!user) {
-            return res.status(400).json({ message: "User not found" });
-        }
-
-        if (user.isVerified) {
-            return res.status(400).json({ message: "Email is already verified" });
-        }
+        if (!user) return res.status(400).json({ message: "User not found" });
+        if (user.isVerified) return res.status(400).json({ message: "Email is already verified" });
 
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         user.verificationCode = code;
@@ -96,29 +85,26 @@ module.exports.resendCode = async (req, res) => {
     }
 };
 
-module.exports.login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+// LOGIN (session-based)
+module.exports.login = (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+        if (err) return next(err);
+        if (!user) return res.status(400).json({ message: info.message });
 
-        const user = await UserModel.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ message: "User not found" });
-        }
+        req.logIn(user, (err) => {
+            if (err) return next(err);
+            // user is now logged in, session cookie is set
+            res.status(200).json({
+                message: "Logged in successfully",
+                user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email }
+            });
+        });
+    })(req, res, next);
+};
 
-        if (!user.isVerified) {
-            return res.status(401).json({ message: "Please verify your email before logging in." });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: "Invalid credentials" });
-        }
-
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '1h' });
-
-        res.status(200).json({ token, user: { id: user._id, email: user.email, firstName: user.firstName, lastName: user.lastName } });
-    } catch (err) {
-        console.error("Login Error:", err);
-        res.status(500).json({ message: err.message });
-    }
+// LOGOUT
+module.exports.logout = (req, res) => {
+    req.logout(() => {
+        res.status(200).json({ message: "Logged out successfully" });
+    });
 };

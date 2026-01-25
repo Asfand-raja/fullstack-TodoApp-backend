@@ -1,20 +1,14 @@
-const jwt = require('jsonwebtoken');
+// middleware/authMiddleware.js
 
+// Session-based authentication middleware using Passport
 const authMiddleware = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: "Access denied. No token provided." });
+    // Passport sets req.isAuthenticated() if session exists
+    if (req.isAuthenticated && req.isAuthenticated()) {
+        return next(); // user is authenticated, allow access
     }
 
-    const token = authHeader.split(' ')[1];
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key');
-        req.user = decoded;
-        next();
-    } catch (err) {
-        res.status(401).json({ message: "Invalid token" });
-    }
+    // If user is not authenticated
+    return res.status(401).json({ message: "Unauthorized" });
 };
 
 module.exports = authMiddleware;

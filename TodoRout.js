@@ -12,10 +12,16 @@ const router = Router();
 // Apply authMiddleware to all todo routes
 router.use(authMiddleware);
 
+// GET all todos for the logged-in user
 router.get('/', getToDo);
-router.post('/save', saveToDo);
-router.post('/update', updateToDo);
-router.post('/delete', deleteToDo);
 
+// CREATE a new todo
+router.post('/save', saveToDo);
+
+// UPDATE an existing todo
+router.post('/update', updateToDo);
+
+// DELETE a todo
+router.post('/delete', deleteToDo);
 
 module.exports = router;

@@ -1,77 +1,50 @@
 const ToDoModel = require('../Models/ToDoModel');
 
-/* -------------------- GET TODOS -------------------- */
+// GET user-specific todos
 module.exports.getToDo = async (req, res) => {
   try {
-    const todos = await ToDoModel.find({ user: req.user.id }).sort({ createdAt: -1 });
-    res.status(200).json(todos);
+    const toDos = await ToDoModel.find({ user: req.user.id });
+    res.status(200).json(toDos);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-/* -------------------- SAVE TODO -------------------- */
+// SAVE a new todo for the logged-in user
 module.exports.saveToDo = async (req, res) => {
   try {
     const { text, date, ongoingDate, lastDate, emoji, priority } = req.body;
+    const userId = req.user.id;
 
-    if (!text) {
-      return res.status(400).json({ message: 'Text is required' });
-    }
+    const data = await ToDoModel.create({ text, date, ongoingDate, lastDate, emoji, priority, user: userId });
 
-    const todo = await ToDoModel.create({
-      text,
-      date,
-      ongoingDate,
-      lastDate,
-      emoji,
-      priority,
-      user: req.user.id
-    });
-
-    res.status(201).json(todo);
+    console.log('Added Successfully...');
+    res.status(201).json(data);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-/* -------------------- UPDATE TODO -------------------- */
 module.exports.updateToDo = async (req, res) => {
-  try {
-    const { id, ...updates } = req.body;
+  const { id, text, completed, date, ongoingDate, lastDate, emoji, priority } = req.body;
+  const userId = req.user.id;
 
-    const updated = await ToDoModel.findOneAndUpdate(
-      { _id: id, user: req.user.id },
-      updates,
-      { new: true }
-    );
+  // Ensure the todo belongs to the user
+  ToDoModel
+    .findOneAndUpdate({ _id: id, user: userId }, { text, completed, date, ongoingDate, lastDate, emoji, priority })
+    .then(() => res.send('Updated Successfully...'))
+    .catch((err) => res.status(500).json({ message: err.message }));
 
-    if (!updated) {
-      return res.status(404).json({ message: 'Todo not found' });
-    }
+}
 
-    res.status(200).json(updated);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-/* -------------------- DELETE TODO -------------------- */
 module.exports.deleteToDo = async (req, res) => {
-  try {
-    const { id } = req.body;
+  const { id } = req.body;
+  const userId = req.user.id;
 
-    const deleted = await ToDoModel.findOneAndDelete({
-      _id: id,
-      user: req.user.id
-    });
+  // Ensure the todo belongs to the user
+  ToDoModel
+    .findOneAndDelete({ _id: id, user: userId })
+    .then(() => res.send('Deleted Successfully...'))
+    .catch((err) => res.status(500).json({ message: err.message }));
+}
 
-    if (!deleted) {
-      return res.status(404).json({ message: 'Todo not found' });
-    }
-
-    res.status(200).json({ message: 'Deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
