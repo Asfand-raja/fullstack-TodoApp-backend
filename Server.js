@@ -21,17 +21,17 @@ app.use(express.json());
 const allowedOrigins = [
   "http://localhost:3000",
   "https://you-todo-things.netlify.app",
+  "https://users-d.netlify.app", // ✅ your deployed frontend domain
 ];
 
 // 🌐 CORS CONFIG — secure and mobile-friendly
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Server-to-server requests or Postman
-      if (!origin) return callback(null, true);
-
+      if (!origin) return callback(null, true); // server requests or Postman
       if (allowedOrigins.includes(origin)) return callback(null, true);
 
+      console.warn("❌ Blocked CORS request from:", origin);
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true, // 🔑 allow cookies
@@ -79,6 +79,11 @@ app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 // 🔗 Routes
 app.use("/auth", authRoutes);
 app.use("/tasks", todoRoutes);
+
+// 📧 Optional: email verification placeholder
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  console.warn("⚠️ Email not configured. Verification emails will fail.");
+}
 
 // ❌ 404 handler
 app.use((req, res) => res.status(404).json({ message: "Route not found" }));
