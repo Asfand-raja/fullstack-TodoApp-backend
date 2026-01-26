@@ -10,7 +10,9 @@ const transporter = nodemailer.createTransport({
     },
     tls: {
         rejectUnauthorized: false // Helps avoid handshake timeouts in some cloud envs
-    }
+    },
+    family: 4, // Force IPv4 (fixes Node/Gmail timeouts in cloud)
+    connectionTimeout: 10000 // 10 seconds timeout
 });
 
 // Verify connection configuration on startup
