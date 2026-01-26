@@ -20,19 +20,8 @@ console.log('Email Config:', {
     pass: process.env.EMAIL_PASS ? 'Set' : 'Missing'
 });
 
-// Verify connection configuration on startup
-transporter.verify((error, success) => {
-    if (error) {
-        console.log('--- EMAIL CONFIGURATION STATUS ---');
-        console.log('Error: Could not connect to the mail server.');
-        console.log('Reason:', error.message);
-        console.log('Help: Ensure you have added EMAIL_USER and EMAIL_PASS to your .env file.');
-        console.log('Help: If using Gmail, you MUST use an "App Password," not your regular password.');
-        console.log('----------------------------------');
-    } else {
-        console.log('Server is ready to send emails to your users! ✅');
-    }
-});
+// Email service initialized
+console.log('Email Service: Initialized');
 
 const sendVerificationEmail = async (email, code) => {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
