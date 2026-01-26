@@ -2,17 +2,26 @@ const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Use SSL
+    port: 587,
+    secure: false, // true for 465, false for other ports
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
     tls: {
-        rejectUnauthorized: false // Helps avoid handshake timeouts in some cloud envs
+        rejectUnauthorized: false
     },
-    family: 4, // Force IPv4 (fixes Node/Gmail timeouts in cloud)
-    connectionTimeout: 10000 // 10 seconds timeout
+    family: 4, // Force IPv4
+});
+
+// Debug: Check if env vars are loaded (do not log actual password)
+console.log('Email Config:', {
+    user: process.env.EMAIL_USER ? 'Set' : 'Missing',
+    pass: process.env.EMAIL_PASS ? 'Set' : 'Missing',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    ipv4: true
 });
 
 // Verify connection configuration on startup
