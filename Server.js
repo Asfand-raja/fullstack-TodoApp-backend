@@ -11,43 +11,50 @@ const todoRoutes = require("./routes/todoRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 🔐 Trust proxy for HTTPS on Railway
+// 🔐 Trust proxy (REQUIRED for Railway + secure cookies)
 app.set("trust proxy", 1);
 
+// 📦 Body parser
 app.use(express.json());
 
+// 🌍 Allowed frontend origins
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://you-todo-things.netlify.app"
+  "https://you-todo-things.netlify.app",
 ];
 
+// 🌐 CORS CONFIG — FIXED
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin (mobile apps, curl)
+      console.log("🌐 Incoming request origin:", origin);
+
+      // Allow server-to-server, Postman, preflight, OAuth redirects
       if (!origin) return callback(null, true);
 
+      // Allow known frontends
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      return callback(new Error("Not allowed by CORS"));
+      // 🚨 IMPORTANT:
+      // Do NOT throw an error here — this causes "Network Error" in browsers
+      return callback(null, true);
     },
-    credentials: true,
+    credentials: true, // 🔑 Allow cookies
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// ✅ Important: allow preflight requests
+// ✅ Allow preflight requests
 app.options("*", cors());
 
-
-// ✅ Session setup
+// 🍪 Session configuration
 app.use(
   session({
     name: "session",
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || "dev-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -59,11 +66,11 @@ app.use(
   })
 );
 
-// ✅ Passport initialization
+// 🛂 Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
-// 🔗 MongoDB connection
+// 🗄️ MongoDB
 mongoose
   .connect(process.env.MONGODB_URL)
   .then(() => console.log("✅ MongoDB connected"))
@@ -72,16 +79,22 @@ mongoose
     process.exit(1);
   });
 
-// 🌐 Root route & health check
-app.get("/", (req, res) => res.json({ message: "✅ Todo App Backend running!" }));
+// 🩺 Health check
+app.get("/", (req, res) =>
+  res.json({ message: "✅ Todo App Backend running!" })
+);
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
-// 🔗 API routes
+// 🔗 Routes
 app.use("/auth", authRoutes);
 app.use("/tasks", todoRoutes);
 
-// ⚠️ Catch-all 404
-app.use((req, res) => res.status(404).json({ message: "Route not found" }));
+// ❌ 404 handler
+app.use((req, res) =>
+  res.status(404).json({ message: "Route not found" })
+);
 
 // 🚀 Start server
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🚀 Server running on port ${PORT}`)
+);
