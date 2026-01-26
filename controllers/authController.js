@@ -1,5 +1,6 @@
 const UserModel = require('../Models/UserModel');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { sendVerificationEmail } = require('../utils/emailService');
 const passport = require('passport');
 
@@ -86,18 +87,23 @@ module.exports.resendCode = async (req, res) => {
 };
 
 // LOGIN (session-based)
+// LOGIN (JWT-based)
 module.exports.login = (req, res, next) => {
-    passport.authenticate('local', (err, user, info) => {
+    passport.authenticate('local', { session: false }, (err, user, info) => {
         if (err) return next(err);
         if (!user) return res.status(400).json({ message: info.message });
 
-        req.logIn(user, (err) => {
-            if (err) return next(err);
-            // user is now logged in, session cookie is set
-            res.status(200).json({
-                message: "Logged in successfully",
-                user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email }
-            });
+        // Sign JWT
+        const token = jwt.sign(
+            { id: user._id, email: user.email },
+            process.env.SESSION_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.status(200).json({
+            message: "Logged in successfully",
+            token, // Backend now sends the token!
+            user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email }
         });
     })(req, res, next);
 };
