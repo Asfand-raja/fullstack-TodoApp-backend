@@ -9,6 +9,8 @@ const transporter = nodemailer.createTransport({
     tls: {
         rejectUnauthorized: false
     },
+    family: 4, // Force IPv4
+    connectionTimeout: 30000, // 30 seconds timeout
     debug: true, // Show debug output
     logger: true // Log information to console
 });
