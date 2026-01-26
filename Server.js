@@ -11,7 +11,7 @@ const todoRoutes = require("./routes/todoRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 🔐 Trust proxy (REQUIRED for Railway + secure cookies)
+// 🔐 Trust proxy (needed for secure cookies on Railway)
 app.set("trust proxy", 1);
 
 // 📦 Body parser
@@ -23,31 +23,24 @@ const allowedOrigins = [
   "https://you-todo-things.netlify.app",
 ];
 
-// 🌐 CORS CONFIG — FIXED
+// 🌐 CORS CONFIG — secure and mobile-friendly
 app.use(
   cors({
     origin: function (origin, callback) {
-      console.log("🌐 Incoming request origin:", origin);
-
-      // Allow server-to-server, Postman, preflight, OAuth redirects
+      // Server-to-server requests or Postman
       if (!origin) return callback(null, true);
 
-      // Allow known frontends
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+      if (allowedOrigins.includes(origin)) return callback(null, true);
 
-      // 🚨 IMPORTANT:
-      // Do NOT throw an error here — this causes "Network Error" in browsers
-      return callback(null, true);
+      return callback(new Error("Not allowed by CORS"));
     },
-    credentials: true, // 🔑 Allow cookies
+    credentials: true, // 🔑 allow cookies
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// ✅ Allow preflight requests
+// ✅ Preflight requests
 app.options("*", cors());
 
 // 🍪 Session configuration
@@ -59,9 +52,9 @@ app.use(
     saveUninitialized: false,
     cookie: {
       secure: process.env.NODE_ENV === "production", // HTTPS only in prod
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 1000 * 60 * 60 * 24, // 1 day
+      httpOnly: true,                                // JS cannot access cookie
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // cross-origin support
+      maxAge: 1000 * 60 * 60 * 24,                  // 1 day
     },
   })
 );
@@ -80,9 +73,7 @@ mongoose
   });
 
 // 🩺 Health check
-app.get("/", (req, res) =>
-  res.json({ message: "✅ Todo App Backend running!" })
-);
+app.get("/", (req, res) => res.json({ message: "✅ Todo App Backend running!" }));
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
 // 🔗 Routes
@@ -90,11 +81,7 @@ app.use("/auth", authRoutes);
 app.use("/tasks", todoRoutes);
 
 // ❌ 404 handler
-app.use((req, res) =>
-  res.status(404).json({ message: "Route not found" })
-);
+app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 
 // 🚀 Start server
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on port ${PORT}`)
-);
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
