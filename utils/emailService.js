@@ -1,7 +1,9 @@
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // true for 465, false for other ports (587)
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
@@ -9,30 +11,39 @@ const transporter = nodemailer.createTransport({
     tls: {
         rejectUnauthorized: false
     },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,    // 5 seconds
     debug: true,
     logger: true
 });
 
-// Debug logs
-console.log('Email Config:', {
-    service: 'gmail',
-    user: process.env.EMAIL_USER ? 'Set' : 'Missing',
-    pass: process.env.EMAIL_PASS ? 'Set' : 'Missing'
-});
+// Debug logs (Safe logging)
+console.log('Email Config initialized for:', process.env.EMAIL_USER || 'Not Set');
 
-// Email service initialized
-console.log('Email Service: Initialized');
+// Verify connection configuration on startup
+transporter.verify((error, success) => {
+    if (error) {
+        console.log('--- EMAIL CONFIGURATION STATUS ---');
+        console.log('Error: Could not connect to any mail server.');
+        console.log('Reason:', error.message);
+        console.log('Help: Check your internet connection or firewall settings.');
+        console.log('Help: If using Gmail, ensure "App Passwords" are correct.');
+        console.log('----------------------------------');
+    } else {
+        console.log('Email server is ready to send messages! ✅');
+    }
+});
 
 const sendVerificationEmail = async (email, code) => {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         console.log('--- DEVELOPMENT MODE: EMAIL NOT CONFIGURED ---');
         console.log(`Verification code for ${email}: ${code}`);
         console.log('---------------------------------------------');
-        return; // Proceed without throwing error
+        return;
     }
 
     const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: `"Todo App" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: 'Your Registration Verification Code',
         text: `Welcome! Your verification code is: ${code}. Please enter this code to complete your signup.`
@@ -42,7 +53,7 @@ const sendVerificationEmail = async (email, code) => {
         await transporter.sendMail(mailOptions);
         console.log('Verification email sent to:', email);
     } catch (error) {
-        console.error('Error sending email:', error);
+        console.error('Error sending email:', error.message);
         // Fallback to console instead of breaking the flow
         console.log('--- FALLBACK: EMAIL SENDING FAILED ---');
         console.log(`Verification code for ${email}: ${code}`);
