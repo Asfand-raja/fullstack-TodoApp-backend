@@ -1,7 +1,7 @@
 const { Resend } = require('resend');
 
-// Initialize Resend with API Key from environment
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend with API Key from environment (trimmed for safety)
+const resend = new Resend((process.env.RESEND_API_KEY || '').trim());
 
 // Verification test on startup (via a sample log)
 if (!process.env.RESEND_API_KEY) {
