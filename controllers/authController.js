@@ -35,7 +35,11 @@ module.exports.register = async (req, res) => {
         }
     } catch (err) {
         console.error("Registration Error:", err);
-        res.status(500).json({ message: err.message });
+        // Handle MongoDB duplicate key error (code 11000)
+        if (err.code === 11000) {
+            return res.status(400).json({ message: "User already exists with this email." });
+        }
+        res.status(500).json({ message: "Internal server error during registration." });
     }
 };
 
