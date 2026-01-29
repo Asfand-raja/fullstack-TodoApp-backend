@@ -1,77 +1,72 @@
-const nodemailer = require('nodemailer');
-
-// 📧 Create a transporter using Gmail SMTP
-// Note: Port 587 (STARTTLS) is often less restricted by cloud providers than Port 465 (SSL)
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-        user: process.env.EMAIL_USER, // Your Gmail address
-        pass: process.env.EMAIL_PASS  // Your Gmail App Password
-    },
-    tls: {
-        rejectUnauthorized: false // Helps avoid some certificate issues in cloud envs
-    }
-});
-
-// Verification check on startup
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.log('--- EMAIL CONFIGURATION STATUS ---');
-    console.log('Warning: EMAIL_USER or EMAIL_PASS is missing in .env');
-    console.log('Help: Verification emails will be logged to console instead.');
-    console.log('----------------------------------');
-} else {
-    transporter.verify((error, success) => {
-        if (error) {
-            console.error('❌ Gmail SMTP Verification Failure:', error.message);
-        } else {
-            console.log('✅ Gmail SMTP Ready: Can send to anyone for free!');
-        }
-    });
-}
+const https = require('https');
 
 const sendVerificationEmail = async (email, code) => {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.log('--- DEVELOPMENT MODE: EMAIL NOT CONFIGURED ---');
+    const apiKey = process.env.BREVO_API_KEY;
+    const senderEmail = process.env.EMAIL_USER || 'r.asfand3249@gmail.com';
+
+    if (!apiKey) {
+        console.log('--- DEVELOPMENT MODE: BREVO NOT CONFIGURED ---');
         console.log(`Verification code for ${email}: ${code}`);
         console.log('-----------------------------------------------');
+        console.log('💡 TIP: Add BREVO_API_KEY to your Railway variables to enable real emails.');
         return;
     }
 
-    const mailOptions = {
-        from: `"Todo App" <${process.env.EMAIL_USER}>`,
-        to: email,
+    const data = JSON.stringify({
+        sender: { name: 'Todo App', email: senderEmail },
+        to: [{ email: email }],
         subject: 'Your Registration Verification Code',
-        text: `Welcome! Your verification code is: ${code}. Please enter this code to complete your signup.`,
-        html: `<div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #4b3621;">Welcome to Todo App!</h2>
-                <p>Your verification code is:</p>
-                <div style="background: #f4f4f4; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px; color: #4b3621; border-radius: 5px;">
+        htmlContent: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: auto;">
+                <h2 style="color: #4b3621; text-align: center;">Welcome to Todo App!</h2>
+                <p style="text-align: center;">Your verification code is:</p>
+                <div style="background: #f4f4f4; padding: 15px; font-size: 32px; font-weight: bold; text-align: center; letter-spacing: 5px; color: #4b3621; border-radius: 5px; margin: 20px 0;">
                     ${code}
                 </div>
-                <p>Please enter this code in the app to complete your signup.</p>
-                <p style="font-size: 0.8rem; color: #777;">If you didn't request this, please ignore this email.</p>
-               </div>`
+                <p style="text-align: center;">Please enter this code in the app to complete your signup.</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 0.8rem; color: #777; text-align: center;">If you didn't request this, please ignore this email.</p>
+            </div>
+        `
+    });
+
+    const options = {
+        hostname: 'api.brevo.com',
+        port: 443,
+        path: '/v3/smtp/email',
+        method: 'POST',
+        headers: {
+            'api-key': apiKey,
+            'content-type': 'application/json',
+            'accept': 'application/json',
+            'content-length': data.length
+        }
     };
 
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log('Verification email sent via Gmail to:', email);
-    } catch (error) {
-        console.error('Error sending email via Gmail:', error.message);
+    const req = https.request(options, (res) => {
+        let responseBody = '';
+        res.on('data', (chunk) => { responseBody += chunk; });
+        res.on('end', () => {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+                console.log('✅ Verification email sent via Brevo API to:', email);
+            } else {
+                console.error('❌ Brevo API Error:', res.statusCode, responseBody);
+                console.log('--- FALLBACK: EMAIL SENDING FAILED ---');
+                console.log(`Verification code for ${email}: ${code}`);
+                console.log('--------------------------------------');
+            }
+        });
+    });
 
-        // Detailed help for cloud timeout issues
-        if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET') {
-            console.log('💡 TIP: Cloud providers (Railway/Render) sometimes block standard email ports.');
-            console.log('💡 If this persists, the app will continue to use the console fallback below.');
-        }
-
-        // Fallback to console instead of breaking the flow
+    req.on('error', (error) => {
+        console.error('❌ Request Error:', error.message);
         console.log('--- FALLBACK: EMAIL SENDING FAILED ---');
         console.log(`Verification code for ${email}: ${code}`);
         console.log('--------------------------------------');
-    }
+    });
+
+    req.write(data);
+    req.end();
 };
 
 module.exports = { sendVerificationEmail };
