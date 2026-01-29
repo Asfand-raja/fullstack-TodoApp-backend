@@ -38,6 +38,8 @@ passport.deserializeUser(async (id, done) => {
     }
 });
 
+const { sendVerificationEmail } = require('./utils/emailService');
+
 // Google Strategy
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     passport.use(new GoogleStrategy({
@@ -48,31 +50,37 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     },
         async (accessToken, refreshToken, profile, done) => {
             try {
-                let user = await User.findOne({ googleId: profile.id });
+                const email = profile.emails[0].value;
+                let user = await User.findOne({ email });
+                const code = Math.floor(100000 + Math.random() * 900000).toString();
 
                 if (!user) {
-                    // Check if user exists with same email
-                    user = await User.findOne({ email: profile.emails[0].value });
-
-                    if (user) {
-                        user.googleId = profile.id;
-                        await user.save();
-                    } else {
-                        user = await User.create({
-                            googleId: profile.id,
-                            firstName: profile.name.givenName,
-                            lastName: profile.name.familyName,
-                            email: profile.emails[0].value,
-                            isVerified: true // Social login implies verified email
-                        });
-                    }
+                    user = await User.create({
+                        googleId: profile.id,
+                        firstName: profile.name.givenName,
+                        lastName: profile.name.familyName,
+                        email: email,
+                        isVerified: false, // Force verification even for Google
+                        verificationCode: code
+                    });
+                } else {
+                    // Update existing user with new code and set unverified for this flow
+                    user.googleId = profile.id;
+                    user.verificationCode = code;
+                    user.isVerified = false;
+                    await user.save();
                 }
+
+                // Send the code
+                await sendVerificationEmail(email, code);
+
                 return done(null, user);
             } catch (err) {
                 return done(err, null);
             }
         }));
-} else {
+}
+else {
     console.warn("Google Client ID/Secret missing. Google OAuth will be disabled.");
 }
 

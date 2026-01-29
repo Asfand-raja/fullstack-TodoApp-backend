@@ -17,8 +17,15 @@ router.get('/google', passport.authenticate('google', { scope: ['profile', 'emai
 router.get('/google/callback',
     passport.authenticate('google', { failureRedirect: process.env.FRONTEND_URL || 'http://localhost:3000' }),
     (req, res) => {
-        // Successful login, redirect to dashboard
-        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+        // If the user is successfully authenticated but not verified (our new rule)
+        if (!req.user.isVerified) {
+            return res.redirect(`${frontendUrl}/login?verify=true&email=${req.user.email}`);
+        }
+
+        // Otherwise (shouldn't happen with our current logic but good for future), redirect to dashboard
+        res.redirect(`${frontendUrl}/dashboard`);
     }
 );
 
