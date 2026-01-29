@@ -1,16 +1,19 @@
 const { Resend } = require('resend');
 
-// Initialize Resend with API Key from environment (trimmed for safety)
-const resend = new Resend((process.env.RESEND_API_KEY || '').trim());
-
-// Verification test on startup (via a sample log)
-if (!process.env.RESEND_API_KEY) {
-    console.log('--- EMAIL CONFIGURATION STATUS ---');
-    console.log('Error: RESEND_API_KEY is missing in .env');
-    console.log('Help: Get a key from resend.com and add it to your .env file.');
-    console.log('----------------------------------');
+// Initialize Resend lazily or handle missing key gracefully
+let resend;
+if (process.env.RESEND_API_KEY) {
+    try {
+        resend = new Resend(process.env.RESEND_API_KEY.trim());
+        console.log('Resend Email Service: Initialized ✅');
+    } catch (err) {
+        console.error('Resend Initialization Error:', err.message);
+    }
 } else {
-    console.log('Resend Email Service: Initialized ✅');
+    console.log('--- EMAIL CONFIGURATION STATUS ---');
+    console.log('Warning: RESEND_API_KEY is missing in .env');
+    console.log('Help: Verification emails will be logged to console instead.');
+    console.log('----------------------------------');
 }
 
 const sendVerificationEmail = async (email, code) => {
