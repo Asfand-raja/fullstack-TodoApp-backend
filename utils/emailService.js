@@ -1,9 +1,11 @@
 const nodemailer = require('nodemailer');
 
 // 📧 Create a transporter using Gmail SMTP
-// Note: We use Port 465 (SSL) which is generally more reliable in cloud environments than 587
+// Note: Port 587 (STARTTLS) is often less restricted by cloud providers than Port 465 (SSL)
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // true for 465, false for other ports
     auth: {
         user: process.env.EMAIL_USER, // Your Gmail address
         pass: process.env.EMAIL_PASS  // Your Gmail App Password
