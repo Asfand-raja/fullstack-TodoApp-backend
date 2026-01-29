@@ -40,6 +40,7 @@ const UserSchema = new mongoose.Schema({
 // Method to compare password for login
 UserSchema.methods.comparePassword = async function (enteredPassword) {
     const bcrypt = require('bcryptjs');
+    if (!this.password) return false; // Handle users without a password (social login)
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
