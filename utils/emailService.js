@@ -39,6 +39,13 @@ const sendVerificationEmail = async (email, code) => {
         console.log('Verification email sent via Resend to:', email);
     } catch (error) {
         console.error('Error sending email via Resend:', error.message);
+
+        // Specific hint for unverified domains
+        if (error.message.includes('own email address')) {
+            console.log('💡 TIP: You are in Resend "Test Mode". Emails can ONLY be sent to r.asfand3249@gmail.com.');
+            console.log('💡 To send to others, verify your domain at: https://resend.com/domains');
+        }
+
         // Fallback to console instead of breaking the flow
         console.log('--- FALLBACK: EMAIL SENDING FAILED ---');
         console.log(`Verification code for ${email}: ${code}`);
