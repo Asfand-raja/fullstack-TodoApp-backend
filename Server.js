@@ -24,6 +24,10 @@ const allowedOrigins = [
   "https://users-d.netlify.app", // ✅ your deployed frontend domain
 ];
 
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 // 🌐 CORS CONFIG — secure and mobile-friendly
 app.use(
   cors({

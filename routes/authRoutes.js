@@ -15,7 +15,7 @@ router.post('/logout', logout);     // Logs out and destroys session
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get('/google/callback',
-    passport.authenticate('google', { failureRedirect: process.env.FRONTEND_URL || 'http://localhost:3000/' }),
+    passport.authenticate('google', { failureRedirect: process.env.FRONTEND_URL || 'http://localhost:3000' }),
     (req, res) => {
         // Successful login, redirect to dashboard
         res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`);
