@@ -55,7 +55,19 @@ module.exports.verify = async (req, res) => {
             user.isVerified = true;
             user.verificationCode = undefined;
             await user.save();
-            res.status(200).json({ message: "Email verified successfully! You can now login." });
+
+            // Sign JWT so they are logged in immediately after verification
+            const token = jwt.sign(
+                { id: user._id, email: user.email },
+                process.env.SESSION_SECRET,
+                { expiresIn: '24h' }
+            );
+
+            res.status(200).json({
+                message: "Email verified successfully!",
+                token,
+                user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email }
+            });
         } else {
             res.status(400).json({ message: "Invalid verification code" });
         }
